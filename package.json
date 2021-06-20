@@ -8,7 +8,8 @@
   "devDependencies": {
     "@types/three": "^0.129.1",
     "typescript": "^4.3.2",
-    "vite": "^2.3.7"
+    "vite": "^2.3.7",
+    "vite-plugin-string": "^1.0.1"
   },
   "dependencies": {
     "three": "^0.129.0"
