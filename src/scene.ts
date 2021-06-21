@@ -2,10 +2,12 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import shaderModifier from "./shaderModifier.glsl";
 
+const glsl = (x: any) => x;
+
 // Scene
 const scene = new THREE.Scene();
 
-scene.background = new THREE.Color("#85cffb");
+scene.background = new THREE.Color(0x3d7fa7);
 
 // Renderer
 const renderer = new THREE.WebGLRenderer({
@@ -43,15 +45,10 @@ function helicoid(u: number, v: number, target: THREE.Vector3) {
 }
 const geometry = new THREE.ParametricBufferGeometry(helicoid, 256, 32);
 
-let shaderUniforms: {
-  [uniform: string]: THREE.IUniform<any>;
-} = {
-  playhead: { value: 0 },
-};
-
 const getMaterial = () => {
   const material = new THREE.MeshPhysicalMaterial({
-    // wireframe: true,
+    color: 0x3d7fa7,
+    transparent: false,
     side: THREE.DoubleSide,
     roughness: 0,
     metalness: 0.5,
@@ -60,39 +57,53 @@ const getMaterial = () => {
   });
 
   material.onBeforeCompile = (shader) => {
-    shader.uniforms = {
-      ...shader.uniforms,
-      ...shaderUniforms,
-    };
+    shader.uniforms.uTime = { value: 0 };
+    material.userData = { shader };
 
-    shader.fragmentShader = "uniform float playhead;\n" + shader.fragmentShader;
+    shader.vertexShader =
+      glsl`
+        varying mat4 vModelMatrix;
+      ` + shader.vertexShader;
+
+    shader.vertexShader = shader.vertexShader.replace(
+      "#include <fog_vertex>",
+      glsl`
+        vModelMatrix = modelMatrix;
+      `
+    );
+
+    shader.fragmentShader =
+      glsl`
+        uniform float uTime;
+        varying mat4 vModelMatrix;
+      ` + shader.fragmentShader;
 
     shader.fragmentShader = shader.fragmentShader.replace(
-      "#include <logdepthbuf_fragment>",
-      shaderModifier + "\n#include <logdepthbuf_fragment>"
+      "#include <transmission_fragment>",
+      shaderModifier + "\n#include <transmission_fragment>"
     );
   };
 
   return material;
 };
 
-const material = getMaterial();
-
-const mesh = new THREE.Mesh(geometry, material);
-mesh.castShadow = true;
+const mesh = new THREE.Mesh(geometry, getMaterial());
 mesh.receiveShadow = true;
 scene.add(mesh);
 
-const geom = new THREE.IcosahedronBufferGeometry(0.215, 5);
-const ball1 = new THREE.Mesh(geom, getMaterial());
-ball1.castShadow = true;
-ball1.receiveShadow = true;
-scene.add(ball1);
+const balls = new THREE.Object3D();
+scene.add(balls);
 
-const ball2 = new THREE.Mesh(geom, getMaterial());
+const ballGeometry = new THREE.IcosahedronBufferGeometry(0.21, 6);
+const ball1 = new THREE.Mesh(ballGeometry, getMaterial());
+ball1.castShadow = true;
+ball1.position.x = 0.65;
+balls.add(ball1);
+
+const ball2 = new THREE.Mesh(ballGeometry, getMaterial());
 ball2.castShadow = true;
-ball2.receiveShadow = true;
-scene.add(ball2);
+ball2.position.x = -0.65;
+balls.add(ball2);
 
 // Light
 const ambientLight = new THREE.AmbientLight(0xffffff, 1);
@@ -110,26 +121,19 @@ light.shadow.camera.right = 3;
 light.shadow.camera.left = -3;
 light.shadow.camera.top = 3;
 light.shadow.camera.bottom = -3;
-light.shadow.normalBias = 0.01;
+light.shadow.normalBias = 0.001;
 
 // Animation
 const clock = new THREE.Clock();
 
 const animate = () => {
   const time = clock.getElapsedTime();
-  if (shaderUniforms) {
-    // shaderUniforms.playhead.value = time;
-  }
 
   const rotateAmount = (-time * Math.PI) / 2;
   mesh.rotation.y = rotateAmount;
-  ball1.rotation.x = time;
-  ball2.rotation.x = time;
-
-  ball1.position.x = Math.sin(rotateAmount) * 0.65;
-  ball1.position.z = Math.cos(rotateAmount) * 0.65;
-  ball2.position.x = Math.sin(rotateAmount + Math.PI) * 0.65;
-  ball2.position.z = Math.cos(rotateAmount + Math.PI) * 0.65;
+  balls.rotation.y = rotateAmount + Math.PI / 2;
+  ball1.rotation.x = -rotateAmount;
+  ball2.rotation.x = rotateAmount;
 
   renderer.render(scene, camera);
   controls.update();
