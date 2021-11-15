@@ -3,11 +3,12 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import shaderModifier from "./shaderModifier.glsl";
 
 const glsl = (x: any) => x;
+const backgroundColor = "hsl(172, 23%, 68%)";
 
 // Scene
 const scene = new THREE.Scene();
 
-scene.background = new THREE.Color(0x3d7fa7);
+scene.background = new THREE.Color(backgroundColor);
 
 // Renderer
 const renderer = new THREE.WebGLRenderer({
@@ -47,7 +48,7 @@ const geometry = new THREE.ParametricBufferGeometry(helicoid, 256, 32);
 
 const getMaterial = () => {
   const material = new THREE.MeshPhysicalMaterial({
-    color: 0x3d7fa7,
+    color: backgroundColor,
     transparent: false,
     side: THREE.DoubleSide,
     roughness: 0,
@@ -129,7 +130,7 @@ const clock = new THREE.Clock();
 const animate = () => {
   const time = clock.getElapsedTime();
 
-  const rotateAmount = (-time * Math.PI) / 2;
+  const rotateAmount = (time * Math.PI) / 2;
   mesh.rotation.y = rotateAmount;
   balls.rotation.y = rotateAmount + Math.PI / 2;
   ball1.rotation.x = -rotateAmount;
